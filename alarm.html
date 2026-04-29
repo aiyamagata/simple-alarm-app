@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>アラーム</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      transition: background 0.1s;
+    }
+
+    body.alarm-active {
+      background: #e74c3c;
+      animation: flash 0.3s infinite alternate;
+    }
+
+    @keyframes flash {
+      from { background: #e74c3c; }
+      to { background: #c0392b; }
+    }
+
+    .container {
+      text-align: center;
+      padding: 40px;
+      max-width: 500px;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 400;
+      color: #aaa;
+      margin-bottom: 30px;
+      letter-spacing: 0.2em;
+    }
+
+    .mode-toggle {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    .mode-btn {
+      padding: 10px 20px;
+      font-size: 0.9rem;
+      border: 2px solid #333;
+      background: transparent;
+      color: #888;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mode-btn.active {
+      border-color: #4e54c8;
+      background: #4e54c8;
+      color: #fff;
+    }
+
+    .display {
+      font-size: 3rem;
+      font-weight: 200;
+      letter-spacing: 0.05em;
+      font-variant-numeric: tabular-nums;
+      color: #fff;
+      margin-bottom: 40px;
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 1px solid #333;
+      padding-bottom: 20px;
+    }
+
+    .inputs {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .input-group label {
+      font-size: 0.75rem;
+      color: #888;
+      letter-spacing: 0.1em;
+    }
+
+    .input-group input {
+      width: 80px;
+      padding: 10px;
+      font-size: 1.4rem;
+      text-align: center;
+      background: #16213e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #fff;
+      outline: none;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .input-group input:focus { border-color: #4e54c8; }
+
+    .buttons {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    button {
+      padding: 14px 32px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    button:active { transform: scale(0.96); }
+    button:disabled { opacity: 0.3; cursor: default; }
+
+    #btnSet { background: #4e54c8; color: #fff; }
+    #btnCancel { background: #2c3e50; color: #fff; }
+    #btnStop { background: #e74c3c; color: #fff; display: none; }
+
+    .info {
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 30px;
+      line-height: 1.6;
+    }
+
+    #modeCountdown { display: none; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>A L A R M</h1>
+
+  <div class="mode-toggle">
+    <button class="mode-btn active" data-mode="time">時刻指定</button>
+    <button class="mode-btn" data-mode="countdown">カウント</button>
+  </div>
+
+  <div id="modeTime">
+    <div class="display" id="displayTime">--:--</div>
+    <div class="inputs">
+      <div class="input-group">
+        <label>時間</label>
+        <input type="number" id="inputTimeH" min="0" max="23" value="7" placeholder="00">
+      </div>
+      <div class="input-group">
+        <label>分</label>
+        <input type="number" id="inputTimeM" min="0" max="59" value="0" placeholder="00">
+      </div>
+    </div>
+    <div class="info">指定した時刻にアラームが鳴ります</div>
+  </div>
+
+  <div id="modeCountdown">
+    <div class="display" id="displayCountdown">00:00</div>
+    <div class="inputs">
+      <div class="input-group">
+        <label>分</label>
+        <input type="number" id="inputCountM" min="0" max="59" value="5" placeholder="00">
+      </div>
+      <div class="input-group">
+        <label>秒</label>
+        <input type="number" id="inputCountS" min="0" max="59" value="0" placeholder="00">
+      </div>
+    </div>
+    <div class="info">今から指定した時間後にアラームが鳴ります</div>
+  </div>
+
+  <div class="buttons">
+    <button id="btnSet">設定</button>
+    <button id="btnCancel">キャンセル</button>
+    <button id="btnStop">停止</button>
+  </div>
+</div>
+
+<script>
+  const modeBtns = document.querySelectorAll('.mode-btn');
+  const modeTime = document.getElementById('modeTime');
+  const modeCountdown = document.getElementById('modeCountdown');
+  const displayTime = document.getElementById('displayTime');
+  const displayCountdown = document.getElementById('displayCountdown');
+
+  const inputTimeH = document.getElementById('inputTimeH');
+  const inputTimeM = document.getElementById('inputTimeM');
+  const inputCountM = document.getElementById('inputCountM');
+  const inputCountS = document.getElementById('inputCountS');
+
+  const btnSet = document.getElementById('btnSet');
+  const btnCancel = document.getElementById('btnCancel');
+  const btnStop = document.getElementById('btnStop');
+
+  let currentMode = 'time';
+  let alarmActive = false;
+  let countdownInterval = null;
+  let checkInterval = null;
+  let countdownRemaining = 0;
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function updateTimeDisplay() {
+    const now = new Date();
+    displayTime.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  }
+
+  function switchMode(mode) {
+    currentMode = mode;
+    modeBtns.forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+
+    if (mode === 'time') {
+      modeTime.style.display = 'block';
+      modeCountdown.style.display = 'none';
+      updateTimeDisplay();
+    } else {
+      modeTime.style.display = 'none';
+      modeCountdown.style.display = 'block';
+    }
+  }
+
+  function triggerAlarm() {
+    alarmActive = true;
+    document.body.classList.add('alarm-active');
+    btnSet.style.display = 'none';
+    btnCancel.style.display = 'none';
+    btnStop.style.display = 'inline-block';
+
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('アラーム', { body: 'アラーム時刻に達しました！' });
+    } else if ('Notification' in window && Notification.permission !== 'denied') {
+      Notification.requestPermission();
+    }
+  }
+
+  function stopAlarm() {
+    alarmActive = false;
+    document.body.classList.remove('alarm-active');
+    btnSet.style.display = 'inline-block';
+    btnCancel.style.display = 'inline-block';
+    btnStop.style.display = 'none';
+
+    if (checkInterval) clearInterval(checkInterval);
+    if (countdownInterval) clearInterval(countdownInterval);
+
+    switchMode(currentMode);
+  }
+
+  modeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.getAttribute('data-mode');
+      switchMode(mode);
+    });
+  });
+
+  btnSet.addEventListener('click', () => {
+    if (currentMode === 'time') {
+      const h = parseInt(inputTimeH.value) || 0;
+      const m = parseInt(inputTimeM.value) || 0;
+
+      if (checkInterval) clearInterval(checkInterval);
+
+      checkInterval = setInterval(() => {
+        const now = new Date();
+        if (now.getHours() === h && now.getMinutes() === m) {
+          triggerAlarm();
+        }
+      }, 1000);
+    } else {
+      const m = parseInt(inputCountM.value) || 0;
+      const s = parseInt(inputCountS.value) || 0;
+      countdownRemaining = m * 60 + s;
+
+      if (countdownRemaining <= 0) return;
+
+      if (countdownInterval) clearInterval(countdownInterval);
+
+      countdownInterval = setInterval(() => {
+        countdownRemaining--;
+        const min = Math.floor(countdownRemaining / 60);
+        const sec = countdownRemaining % 60;
+        displayCountdown.textContent = `${pad(min)}:${pad(sec)}`;
+
+        if (countdownRemaining <= 0) {
+          clearInterval(countdownInterval);
+          triggerAlarm();
+        }
+      }, 1000);
+    }
+  });
+
+  btnCancel.addEventListener('click', () => {
+    if (checkInterval) clearInterval(checkInterval);
+    if (countdownInterval) clearInterval(countdownInterval);
+    stopAlarm();
+  });
+
+  btnStop.addEventListener('click', stopAlarm);
+
+  updateTimeDisplay();
+  setInterval(updateTimeDisplay, 1000);
+
+  switchMode('time');
+</script>
+</body>
+</html>
