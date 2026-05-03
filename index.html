@@ -281,12 +281,17 @@
 
       if (checkInterval) clearInterval(checkInterval);
 
+      btnSet.disabled = true;
+      btnCancel.disabled = false;
+
       checkInterval = setInterval(() => {
         const now = new Date();
+        updateTimeDisplay();
         if (now.getHours() === h && now.getMinutes() === m) {
+          clearInterval(checkInterval);
           triggerAlarm();
         }
-      }, 1000);
+      }, 500);
     } else {
       const m = parseInt(inputCountM.value) || 0;
       const s = parseInt(inputCountS.value) || 0;
@@ -295,6 +300,10 @@
       if (countdownRemaining <= 0) return;
 
       if (countdownInterval) clearInterval(countdownInterval);
+
+      btnSet.disabled = true;
+      btnCancel.disabled = false;
+      displayCountdown.textContent = `${pad(m)}:${pad(s)}`;
 
       countdownInterval = setInterval(() => {
         countdownRemaining--;
