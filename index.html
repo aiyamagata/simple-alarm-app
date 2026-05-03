@@ -260,6 +260,8 @@
     btnSet.style.display = 'inline-block';
     btnCancel.style.display = 'inline-block';
     btnStop.style.display = 'none';
+    btnSet.disabled = false;
+    btnCancel.disabled = false;
 
     if (checkInterval) clearInterval(checkInterval);
     if (countdownInterval) clearInterval(countdownInterval);
